@@ -6,10 +6,19 @@ resolver: lts-8.0
 # Local packages, usually specified by relative directory name
 packages:
 - '.'
+- location:
+    git: git@github.com:tmbull/servant.git
+    commit: 0dd045caa71685ce89e39db7c68d56905b8ba854
+  subdirs:
+    - servant-foreign
+    - servant
+  extra-dep: true
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:
 - elm-export-0.6.0.1
+- cabal-doctest-1.0.2
+
 
 # Override default flag values for local packages and extra-deps
 flags: {}

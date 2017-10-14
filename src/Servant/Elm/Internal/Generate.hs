@@ -7,7 +7,7 @@ import           Prelude                      hiding ((<$>))
 import           Control.Lens                 (to, (^.))
 import           Data.List                    (nub)
 import           Data.Maybe                   (catMaybes)
-import           Data.Proxy                   (Proxy)
+import           Data.Proxy                   (Proxy(..))
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
 import qualified Data.Text.Lazy               as L
@@ -379,25 +379,31 @@ mkRequest opts request =
             "Http.jsonBody" <+> parens (stext encoderName <+> elmBodyArg)
 
     expect =
-      case request ^. F.reqReturnType of
-        Just elmTypeExpr | isEmptyType opts elmTypeExpr ->
-          let elmConstructor =
-                Elm.toElmTypeRefWith (elmExportOptions opts) elmTypeExpr
-          in
-            "Http.expectStringResponse" <$>
-            indent i (parens (backslash <> braces " body " <+> "->" <$>
+      if
+        any
+        (\m -> m == F.contentType (Proxy :: Proxy F.JSON))
+        (request ^. F.reqReturnContentTypes)
+      then
+        case request ^. F.reqReturnType of
+          Just elmTypeExpr | isEmptyType opts elmTypeExpr ->
+            let elmConstructor =
+                  Elm.toElmTypeRefWith (elmExportOptions opts) elmTypeExpr
+            in
+              "Http.expectStringResponse" <$>
+              indent i (parens (backslash <> braces " body " <+> "->" <$>
                               indent i ("if String.isEmpty body then" <$>
                                         indent i "Ok" <+> stext elmConstructor <$>
                                         "else" <$>
                                         indent i ("Err" <+> dquotes "Expected the response body to be empty")) <> line))
 
+          Just elmTypeExpr ->
+            "Http.expectJson" <+> stext (Elm.toElmDecoderRefWith (elmExportOptions opts) elmTypeExpr)
 
-        Just elmTypeExpr ->
-          "Http.expectJson" <+> stext (Elm.toElmDecoderRefWith (elmExportOptions opts) elmTypeExpr)
+          Nothing ->
+            error "mkHttpRequest: no reqReturnType?"
 
-        Nothing ->
-          error "mkHttpRequest: no reqReturnType?"
-
+        else
+          "Http.expectString"
 
 mkUrl :: ElmOptions -> [F.Segment ElmDatatype] -> Doc
 mkUrl opts segments =

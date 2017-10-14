@@ -12,7 +12,7 @@ import           Data.Monoid               ((<>))
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T
 import qualified Data.Text.IO              as T
-import           Servant.API               ((:>), Get, JSON)
+import           Servant.API               ((:>), Get, JSON, PlainText)
 import           Servant.Elm
 import           Test.Hspec                (Spec, describe, hspec, it)
 import           Test.HUnit                (Assertion, assertBool)
@@ -84,6 +84,22 @@ spec = do
                                     { urlPrefix = Dynamic
                                     })
                                    (Proxy :: Proxy ("one" :> Get '[JSON] Int)))
+                  generated `itemsShouldBe` expected
+           it "with PlainText" $
+               do expected <-
+                      mapM
+                          (\(fpath,header) -> do
+                               source <- T.readFile fpath
+                               return (fpath, header, source))
+                          [ ( "test/elm-sources/getText.elm"
+                            , "module getText exposing (..)\n\n" <>
+                              "import Http\n" <>
+                              "import Json.Decode exposing (..)\n\n\n")]
+                  let generated =
+                          map
+                              (<> "\n")
+                              (generateElmForAPI
+                                   (Proxy :: Proxy ("text" :> Get '[PlainText] Text)))
                   generated `itemsShouldBe` expected
 
 itemsShouldBe :: [Text] -> [(String, Text, Text)] -> IO ()
