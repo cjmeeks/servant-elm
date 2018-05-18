@@ -6,6 +6,10 @@ resolver: lts-11.2
 # Local packages, usually specified by relative directory name
 packages:
 - '.'
+- location:
+    git: git@github.com:agrafix/elm-bridge.git
+    commit: 1c3c6f288708d3771d3a1c42040c6937d7c65f05
+  extra-dep: true
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps: []
