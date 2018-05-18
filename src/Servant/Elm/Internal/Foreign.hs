@@ -7,21 +7,22 @@
 module Servant.Elm.Internal.Foreign where
 
 import           Data.Proxy      (Proxy (Proxy))
-import           Elm             (ElmDatatype, ElmType, toElmType)
+--import           Elm             (ElmDatatype, ElmType, toElmType)
+import           Elm.TyRep       (ETypeDef, IsElmDefinition(..))
 import           Servant.Foreign (Foreign, GenerateList, HasForeign,
                                   HasForeignType, Req, listFromAPI, typeFor)
 
 
 data LangElm
 
-instance (ElmType a) => HasForeignType LangElm ElmDatatype a where
+instance (IsElmDefinition a) => HasForeignType LangElm ETypeDef a where
   typeFor _ _ _ =
-    toElmType (Proxy :: Proxy a)
+    compileElmDef (Proxy :: Proxy a)
 
 getEndpoints
-  :: ( HasForeign LangElm ElmDatatype api
-     , GenerateList ElmDatatype (Foreign ElmDatatype api))
+  :: ( HasForeign LangElm ETypeDef api
+     , GenerateList ETypeDef (Foreign ETypeDef api))
   => Proxy api
-  -> [Req ElmDatatype]
+  -> [Req ETypeDef]
 getEndpoints =
-  listFromAPI (Proxy :: Proxy LangElm) (Proxy :: Proxy ElmDatatype)
+  listFromAPI (Proxy :: Proxy LangElm) (Proxy :: Proxy ETypeDef)

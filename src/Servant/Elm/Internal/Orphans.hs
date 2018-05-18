@@ -4,18 +4,20 @@
 
 module Servant.Elm.Internal.Orphans where
 
-import           Elm         (ElmDatatype, ElmType, toElmType)
+--import           Elm         (ElmDatatype, ElmType, toElmType)
+import           Data.Proxy (Proxy(..))
+import           Elm.TyRep       (ETypeDef, IsElmDefinition(..))
 import           Servant.API (NoContent, Headers, getResponse)
 
 
-instance ElmType ElmDatatype where
-  toElmType = id
+instance IsElmDefinition ETypeDef where
+  compileElmDef _ = compileElmDef (Proxy :: Proxy ETypeDef)
 
 
-instance ElmType NoContent
+instance IsElmDefinition NoContent
 
 
 -- TODO: Generate Elm functions that can handle the response headers. PRs
 -- welcome!
-instance (ElmType a) => ElmType (Headers ls a) where
-  toElmType = toElmType . getResponse
+-- instance (IsElmDefinition a) => IsElmDefinition (Headers ls a) where
+--   compileElmDef _ = compileElmDef (Proxy :: Proxy a)
