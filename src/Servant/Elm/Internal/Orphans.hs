@@ -14,7 +14,8 @@ instance IsElmDefinition ETypeDef where
   compileElmDef _ = compileElmDef (Proxy :: Proxy ETypeDef)
 
 
-instance IsElmDefinition NoContent
+instance IsElmDefinition NoContent where
+  compileElmDef _ = compileElmDef (Proxy :: Proxy NoContent)
 
 
 -- TODO: Generate Elm functions that can handle the response headers. PRs

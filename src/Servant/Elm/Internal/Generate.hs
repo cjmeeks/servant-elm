@@ -7,15 +7,17 @@ import           Prelude                      hiding ((<$>))
 import           Control.Lens                 (to, (^.))
 import           Data.List                    (nub)
 import           Data.Maybe                   (catMaybes)
-import           Data.Proxy                   (Proxy)
+import           Data.Proxy                   (Proxy(..))
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
 import qualified Data.Text.Lazy               as L
 import qualified Data.Text.Encoding           as T
 --import           Elm                          (ElmDatatype(..), ElmPrimitive(..))
 --import qualified Elm
-import           Elm.Module      (DefineElm)
-import           Elm.TyRep       (ETypeDef, IsElmDefinition, compileElmDef)
+import           Elm.Module      (DefineElm(..))
+import Elm.TyRep
+       (EAlias(..), EPrimAlias(..), ESum(..), ETCon(..), EType(..), ETypeDef(..), IsElmDefinition, compileElmDef)
+import Elm.TyRender (renderElm)
 import           Servant.API                  (NoContent (..))
 import           Servant.Elm.Internal.Foreign (LangElm, getEndpoints)
 import           Servant.Elm.Internal.Orphans ()
@@ -114,8 +116,8 @@ would be better off creating a 'Spec' with the result and using 'specsToDir',
 which handles the module name for you.
 -}
 generateElmForAPI
-  :: ( F.HasForeign LangElm ETypeDef api
-     , F.GenerateList ETypeDef (F.Foreign ETypeDef api))
+  :: ( F.HasForeign LangElm EType api
+     , F.GenerateList EType (F.Foreign EType api))
   => Proxy api
   -> [Text]
 generateElmForAPI =
@@ -126,8 +128,8 @@ generateElmForAPI =
 Generate Elm code for the API with custom options.
 -}
 generateElmForAPIWith
-  :: ( F.HasForeign LangElm ETypeDef api
-     , F.GenerateList ETypeDef (F.Foreign ETypeDef api))
+  :: ( F.HasForeign LangElm EType api
+     , F.GenerateList EType (F.Foreign EType api))
   => ElmOptions
   -> Proxy api
   -> [Text]
@@ -140,7 +142,7 @@ i = 4
 {-|
 Generate an Elm function for one endpoint.
 -}
-generateElmForRequest :: ElmOptions -> F.Req ETypeDef -> Doc
+generateElmForRequest :: ElmOptions -> F.Req EType -> Doc
 generateElmForRequest opts request =
   funcDef
   where
@@ -175,8 +177,15 @@ generateElmForRequest opts request =
     elmRequest =
       mkRequest opts request
 
+elmTypeRef :: EType -> Doc
+elmTypeRef eType = stext $ T.pack  $ renderElm $ case eType of
+      ETypeAlias ea -> ea_name ea
+      ETypePrimAlias ep -> epa_name ep
+      ETypeSum es -> es_name es
 
-mkTypeSignature :: ElmOptions -> F.Req ETypeDef -> Doc
+
+
+mkTypeSignature :: ElmOptions -> F.Req EType -> Doc
 mkTypeSignature opts request =
   (hsep . punctuate " ->" . concat)
     [ catMaybes [urlPrefixType]
@@ -191,10 +200,6 @@ mkTypeSignature opts request =
         case (urlPrefix opts) of
           Dynamic -> Just "String"
           Static _ -> Nothing
-
-    elmTypeRef :: ETypeDef -> Doc
-    elmTypeRef eType =
-      stext (Elm.toElmTypeRefWith (elmExportOptions opts) eType)
 
     headerTypes :: [Doc]
     headerTypes =
@@ -226,19 +231,19 @@ mkTypeSignature opts request =
       pure ("Http.Request" <+> parens result)
 
 
-elmHeaderArg :: F.HeaderArg ETypeDef -> Doc
+elmHeaderArg :: F.HeaderArg EType -> Doc
 elmHeaderArg header =
   "header_" <>
   header ^. F.headerArg . F.argName . to (stext . T.replace "-" "_" . F.unPathSegment)
 
 
-elmCaptureArg :: F.Segment ETypeDef -> Doc
+elmCaptureArg :: F.Segment EType -> Doc
 elmCaptureArg segment =
   "capture_" <>
   F.captureArg segment ^. F.argName . to (stext . F.unPathSegment)
 
 
-elmQueryArg :: F.QueryArg ETypeDef -> Doc
+elmQueryArg :: F.QueryArg EType -> Doc
 elmQueryArg arg =
   "query_" <>
   arg ^. F.queryArgName . F.argName . to (stext . F.unPathSegment)
@@ -259,7 +264,7 @@ isNotCookie header =
 
 mkArgs
   :: ElmOptions
-  -> F.Req ETypeDef
+  -> F.Req EType
   -> Doc
 mkArgs opts request =
   (hsep . concat) $
@@ -286,7 +291,7 @@ mkArgs opts request =
     ]
 
 
-mkLetParams :: ElmOptions -> F.Req ETypeDef -> Maybe Doc
+mkLetParams :: ElmOptions -> F.Req EType -> Maybe Doc
 mkLetParams opts request =
   if null (request ^. F.reqUrl . F.queryStr) then
     Nothing
@@ -298,7 +303,7 @@ mkLetParams opts request =
     params :: [Doc]
     params = map paramToDoc (request ^. F.reqUrl . F.queryStr)
 
-    paramToDoc :: F.QueryArg ETypeDef -> Doc
+    paramToDoc :: F.QueryArg EType -> Doc
     paramToDoc qarg =
       -- something wrong with indentation here...
       case qarg ^. F.queryArgType of
@@ -332,7 +337,7 @@ mkLetParams opts request =
         elmName= qarg ^. F.queryArgName . F.argName . to (stext . F.unPathSegment)
 
 
-mkRequest :: ElmOptions -> F.Req ETypeDef -> Doc
+mkRequest :: ElmOptions -> F.Req EType -> Doc
 mkRequest opts request =
   "Http.request" <$>
   indent i
@@ -389,8 +394,9 @@ mkRequest opts request =
 
         Just elmTypeExpr ->
           let
-            encoderName =
-              Elm.toElmEncoderRefWith (elmExportOptions opts) elmTypeExpr
+            encoderName = "poop"
+            -- TODO: Figure out how to get encoderName from elmDataType
+--              Elm.toElmEncoderRefWith (elmExportOptions opts) elmTypeExpr
           in
             "Http.jsonBody" <+> parens (stext encoderName <+> elmBodyArg)
 
@@ -398,7 +404,7 @@ mkRequest opts request =
       case request ^. F.reqReturnType of
         Just elmTypeExpr | isEmptyType opts elmTypeExpr ->
           let elmConstructor =
-                Elm.toElmTypeRefWith (elmExportOptions opts) elmTypeExpr
+                elmTypeRef elmTypeExpr
           in
             "Http.expectStringResponse" <$>
             indent i (parens (backslash <> braces " body " <+> "->" <$>
@@ -409,13 +415,13 @@ mkRequest opts request =
 
 
         Just elmTypeExpr ->
-          "Http.expectJson" <+> stext (Elm.toElmDecoderRefWith (elmExportOptions opts) elmTypeExpr)
+          "Http.expectJson" <+> stext "EEEE" -- TODO: get decoder name (Elm.toElmDecoderRefWith (elmExportOptions opts) elmTypeExpr)
 
         Nothing ->
           error "mkHttpRequest: no reqReturnType?"
 
 
-mkUrl :: ElmOptions -> [F.Segment ETypeDef] -> Doc
+mkUrl :: ElmOptions -> [F.Segment EType] -> Doc
 mkUrl opts segments =
   "String.join" <+> dquotes "/" <$>
   (indent i . elmList)
@@ -425,7 +431,7 @@ mkUrl opts segments =
       : map segmentToDoc segments)
   where
 
-    segmentToDoc :: F.Segment ETypeDef -> Doc
+    segmentToDoc :: F.Segment EType -> Doc
     segmentToDoc s =
       case F.unSegment s of
         F.Static path ->
@@ -443,7 +449,7 @@ mkUrl opts segments =
 
 
 mkQueryParams
-  :: F.Req ETypeDef
+  :: F.Req EType
   -> Doc
 mkQueryParams request =
   if null (request ^. F.reqUrl . F.queryStr) then
@@ -458,28 +464,27 @@ mkQueryParams request =
 {- | Determines whether we construct an Elm function that expects an empty
 response body.
 -}
-isEmptyType :: ElmOptions -> ETypeDef -> Bool
-isEmptyType opts elmTypeExpr =
-  elmTypeExpr `elem` emptyResponseElmTypes opts
+-- TDOO: This is wrong. Should be tuple type and NoContent?
+isEmptyType :: ElmOptions -> EType -> Bool
+isEmptyType opts (ETyCon (ETCon elmTypeExpr)) = elmTypeExpr `elem` ["()"]
 
 
 {- | Determines whether we call `toString` on URL captures and query params of
 this type in Elm.
 -}
-isElmStringType :: ElmOptions -> ETypeDef -> Bool
-isElmStringType opts elmTypeExpr =
-  elmTypeExpr `elem` stringElmTypes opts
+isElmStringType :: ElmOptions -> EType -> Bool
+isElmStringType opts (ETyCon (ETCon elmTypeExpr)) = elmTypeExpr `elem` ["String"]
 
 {- | Determines whether a type is 'Maybe a' where 'a' is something akin to a 'String'.
 -}
-isElmMaybeStringType :: ElmOptions -> ETypeDef -> Bool
-isElmMaybeStringType opts (ElmPrimitive (EMaybe elmTypeExpr)) = elmTypeExpr `elem` stringElmTypes opts
+-- TODO: Figure out elm string types
+isElmMaybeStringType :: ElmOptions -> EType -> Bool
+isElmMaybeStringType opts  (ETyApp (ETyCon (ETCon  "Maybe")) (ETyCon (ETCon innerType))) = innerType `elem` ["String"]
 isElmMaybeStringType _ _ = False
 
-isElmMaybeType :: ETypeDef -> Bool
-isElmMaybeType (ElmPrimitive (EMaybe _)) = True
+isElmMaybeType :: EType -> Bool
+isElmMaybeType (ETyApp (ETyCon (ETCon  "Maybe")) _) = True
 isElmMaybeType _ = False
-
 
 -- Doc helpers
 
