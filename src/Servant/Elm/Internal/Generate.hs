@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
@@ -28,10 +29,30 @@ import           Text.PrettyPrint.Leijen.Text
 -- TODO: Export this stuff from elm-bridge
 
 getName :: ETypeDef -> ETypeName
-getName eType = case defaultAlterations eType of
+getName eType = case defaultAlterations' $ defaultAlterations eType of
   ETypeAlias (EAlias name _ _ _ _) -> name
   ETypePrimAlias (EPrimAlias name _) -> name
   ETypeSum (ESum name _ _ _ _) -> name
+
+recAlterName :: (ETypeName -> ETypeName) -> ETypeDef -> ETypeDef
+recAlterName nameFun eType = case defaultAlterations eType of
+  ETypeAlias ealias@EAlias{..} -> ETypeAlias ealias { ea_name = nameFun ea_name }
+  ETypePrimAlias epalias@EPrimAlias{..} -> ETypePrimAlias epalias { epa_name = nameFun epa_name }
+  ETypeSum esum@ESum{..} -> ETypeSum esum { es_name = nameFun es_name }
+
+defaultAlterations' :: ETypeDef -> ETypeDef
+defaultAlterations' = recAlterName $ \t -> case t of
+                                  -- ETyApp (ETyCon (ETCon "HashSet")) s             -> checkSet s
+                                  -- ETyApp (ETyCon (ETCon "Set")) s                 -> checkSet s
+                                  -- ETyApp (ETyApp (ETyCon (ETCon "HashMap")) k) v  -> checkMap k v
+                                  -- ETyApp (ETyApp (ETyCon (ETCon "THashMap")) k) v -> checkMap k v
+                                  -- ETyApp (ETyApp (ETyCon (ETCon "Map")) k) v      -> checkMap k v
+                                  ETypeName "Integer" args                        -> ETypeName "Int" args
+                                  ETypeName "Natural" args                        -> ETypeName "Int" args
+                                  ETypeName "Text" args                           -> ETypeName "String" args
+                                  ETypeName "Vector" args                         -> ETypeName "List" args
+                                  ETypeName "Double" args                         -> ETypeName "Float" args
+                                  _                                               -> t
 
 
 toElmTypeRef :: ETypeDef -> Text

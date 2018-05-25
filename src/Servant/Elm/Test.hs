@@ -29,7 +29,7 @@ data Foo
    { f_name :: String
    , f_text :: Text
    , f_gender :: Gender
-   , f_other :: List String
+--   , f_other :: List String
    , f_list :: [Int]
    } deriving (Show, Eq)
 
@@ -65,7 +65,6 @@ deriveBoth defaultOptions ''Gender
 
 deriveBoth defaultOptions ''Foo
 
-deriveBoth defaultOptions ''List
 
 --deriveElmDef defaultOptions ''[Foo]
 
@@ -76,6 +75,6 @@ main = do
     putStrLn $ makeElmModule "Foo"
         [ DefineElm (Proxy :: Proxy Foo)
         , DefineElm (Proxy :: Proxy Gender)
-        , DefineElm (Proxy :: Proxy (List Int))
+--        , DefineElm (Proxy :: Proxy (List Int))
         ]
     mapM_ (putStrLn . unpack) $ generateElmForAPI (Proxy :: Proxy BooksApi)
