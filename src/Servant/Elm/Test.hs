@@ -47,9 +47,9 @@ data Maybee = Maybee
 
     }
 
-newtype MyText = MyText Text
+newtype MyFoo = MyFoo Foo
 
-deriveElmDef defaultOptions ''MyText
+deriveElmDef defaultOptions ''MyFoo
 
 deriveElmDef defaultOptions ''Maybee
 
@@ -63,7 +63,9 @@ deriveElmDef defaultOptions ''NoContent
 
 deriveBoth defaultOptions ''Gender
 
-deriveBoth defaultOptions ''Foo
+deriveElmDef defaultOptions ''Int
+
+deriveElmDef defaultOptions ''Foo
 
 
 --deriveElmDef defaultOptions ''[Foo]
@@ -75,6 +77,7 @@ main = do
     putStrLn $ makeElmModule "Foo"
         [ DefineElm (Proxy :: Proxy Foo)
         , DefineElm (Proxy :: Proxy Gender)
+        , DefineElm (Proxy :: Proxy Int)
 --        , DefineElm (Proxy :: Proxy (List Int))
         ]
     mapM_ (putStrLn . unpack) $ generateElmForAPI (Proxy :: Proxy BooksApi)

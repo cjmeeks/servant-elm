@@ -20,7 +20,7 @@ import           Elm.Module      (DefineElm, defaultAlterations)
 import           Elm.TyRep (EAlias(..), ESum(..), EPrimAlias(..), EType(..), ETypeDef(..), ETypeName(..), ETVar(..), IsElmDefinition(..), SumEncoding'(..), compileElmDef)
 
 import           Servant.API                  (NoContent (..))
-import           Servant.Elm.Internal.Foreign (LangElm, getEndpoints)
+import           Servant.Elm.Internal.Foreign (ElmThing(..), LangElm, getEndpoints)
 import           Servant.Elm.Internal.Orphans ()
 import qualified Servant.Foreign              as F
 import           Text.PrettyPrint.Leijen.Text
@@ -55,13 +55,13 @@ defaultAlterations' = recAlterName $ \t -> case t of
                                   _                                               -> t
 
 
-toElmTypeRef :: ETypeDef -> Text
-toElmTypeRef eType = T.pack $ et_name $ getName eType
+toElmTypeRef :: ElmThing -> Text
+toElmTypeRef (ElmType eType) = T.pack $ et_name $ getName eType
 
-toElmDecoderRef :: ETypeDef -> Text
+toElmDecoderRef :: ElmThing -> Text
 toElmDecoderRef eType = "jsonDec" `T.append` toElmTypeRef eType
 
-toElmEncoderRef :: ETypeDef -> Text
+toElmEncoderRef :: ElmThing -> Text
 toElmEncoderRef eType = "jsonEnc" `T.append` toElmTypeRef eType
 
 {-|
@@ -155,8 +155,8 @@ would be better off creating a 'Spec' with the result and using 'specsToDir',
 which handles the module name for you.
 -}
 generateElmForAPI
-  :: ( F.HasForeign LangElm ETypeDef api
-     , F.GenerateList ETypeDef (F.Foreign ETypeDef api))
+  :: ( F.HasForeign LangElm ElmThing api
+     , F.GenerateList ElmThing (F.Foreign ElmThing api))
   => Proxy api
   -> [Text]
 generateElmForAPI =
@@ -167,8 +167,8 @@ generateElmForAPI =
 Generate Elm code for the API with custom options.
 -}
 generateElmForAPIWith
-  :: ( F.HasForeign LangElm ETypeDef api
-     , F.GenerateList ETypeDef (F.Foreign ETypeDef api))
+  :: ( F.HasForeign LangElm ElmThing api
+     , F.GenerateList ElmThing (F.Foreign ElmThing api))
   => ElmOptions
   -> Proxy api
   -> [Text]
@@ -181,7 +181,7 @@ i = 4
 {-|
 Generate an Elm function for one endpoint.
 -}
-generateElmForRequest :: ElmOptions -> F.Req ETypeDef -> Doc
+generateElmForRequest :: ElmOptions -> F.Req ElmThing -> Doc
 generateElmForRequest opts request =
   funcDef
   where
@@ -216,7 +216,7 @@ generateElmForRequest opts request =
     elmRequest =
       mkRequest opts request
 
-mkTypeSignature :: ElmOptions -> F.Req ETypeDef -> Doc
+mkTypeSignature :: ElmOptions -> F.Req ElmThing -> Doc
 mkTypeSignature opts request =
   (hsep . punctuate " ->" . concat)
     [ catMaybes [urlPrefixType]
@@ -265,19 +265,19 @@ mkTypeSignature opts request =
       pure ("Http.Request" <+> parens result)
 
 
-elmHeaderArg :: F.HeaderArg ETypeDef -> Doc
+elmHeaderArg :: F.HeaderArg ElmThing -> Doc
 elmHeaderArg header =
   "header_" <>
   header ^. F.headerArg . F.argName . to (stext . T.replace "-" "_" . F.unPathSegment)
 
 
-elmCaptureArg :: F.Segment ETypeDef -> Doc
+elmCaptureArg :: F.Segment ElmThing -> Doc
 elmCaptureArg segment =
   "capture_" <>
   F.captureArg segment ^. F.argName . to (stext . F.unPathSegment)
 
 
-elmQueryArg :: F.QueryArg ETypeDef -> Doc
+elmQueryArg :: F.QueryArg ElmThing -> Doc
 elmQueryArg arg =
   "query_" <>
   arg ^. F.queryArgName . F.argName . to (stext . F.unPathSegment)
@@ -298,7 +298,7 @@ isNotCookie header =
 
 mkArgs
   :: ElmOptions
-  -> F.Req ETypeDef
+  -> F.Req ElmThing
   -> Doc
 mkArgs opts request =
   (hsep . concat) $
@@ -325,7 +325,7 @@ mkArgs opts request =
     ]
 
 
-mkLetParams :: ElmOptions -> F.Req ETypeDef -> Maybe Doc
+mkLetParams :: ElmOptions -> F.Req ElmThing -> Maybe Doc
 mkLetParams opts request =
   if null (request ^. F.reqUrl . F.queryStr) then
     Nothing
@@ -337,7 +337,7 @@ mkLetParams opts request =
     params :: [Doc]
     params = map paramToDoc (request ^. F.reqUrl . F.queryStr)
 
-    paramToDoc :: F.QueryArg ETypeDef -> Doc
+    paramToDoc :: F.QueryArg ElmThing -> Doc
     paramToDoc qarg =
       -- something wrong with indentation here...
       case qarg ^. F.queryArgType of
@@ -374,7 +374,7 @@ mkLetParams opts request =
         elmName= qarg ^. F.queryArgName . F.argName . to (stext . F.unPathSegment)
 
 
-mkRequest :: ElmOptions -> F.Req ETypeDef -> Doc
+mkRequest :: ElmOptions -> F.Req ElmThing -> Doc
 mkRequest opts request =
   "Http.request" <$>
   indent i
@@ -461,7 +461,7 @@ mkRequest opts request =
           error "mkHttpRequest: no reqReturnType?"
 
 
-mkUrl :: ElmOptions -> [F.Segment ETypeDef] -> Doc
+mkUrl :: ElmOptions -> [F.Segment ElmThing] -> Doc
 mkUrl opts segments =
   "String.join" <+> dquotes "/" <$>
   (indent i . elmList)
@@ -471,7 +471,7 @@ mkUrl opts segments =
       : map segmentToDoc segments)
   where
 
-    segmentToDoc :: F.Segment ETypeDef -> Doc
+    segmentToDoc :: F.Segment ElmThing -> Doc
     segmentToDoc s =
       case F.unSegment s of
         F.Static path ->
@@ -491,7 +491,7 @@ mkUrl opts segments =
 
 
 mkQueryParams
-  :: F.Req ETypeDef
+  :: F.Req ElmThing
   -> Doc
 mkQueryParams request =
   if null (request ^. F.reqUrl . F.queryStr) then
