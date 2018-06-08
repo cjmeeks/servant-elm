@@ -7,8 +7,8 @@ resolver: lts-11.2
 packages:
 - '.'
 - location:
-    git: git@github.com:agrafix/elm-bridge.git
-    commit: 1c3c6f288708d3771d3a1c42040c6937d7c65f05
+    git: git@github.com:tmbull/elm-bridge.git
+    commit: 944c33ae9f67c3f3b7c915924221a1996400bc55
   extra-dep: true
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)

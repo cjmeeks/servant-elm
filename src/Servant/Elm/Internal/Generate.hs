@@ -13,55 +13,22 @@ import           Data.Text                    (Text)
 import qualified Data.Text                    as T
 import qualified Data.Text.Lazy               as L
 import qualified Data.Text.Encoding           as T
---import           Elm                          (ElmDatatype(..), ElmPrimitive(..))
---import qualified Elm
-import           Elm.Module      (DefineElm, defaultAlterations)
---import           Elm.TyRep       (ETypeDef, IsElmDefinition, compileElmDef)
-import           Elm.TyRep (EAlias(..), ESum(..), EPrimAlias(..), EType(..), ETypeDef(..), ETypeName(..), ETVar(..), IsElmDefinition(..), SumEncoding'(..), compileElmDef)
+import           Elm.TyRep (EType)
+import           Elm.TyRender (renderElm)
 
-import           Servant.API                  (NoContent (..))
-import           Servant.Elm.Internal.Foreign (ElmThing(..), LangElm, getEndpoints)
+import           Servant.Elm.Internal.Foreign (LangElm, getEndpoints)
 import           Servant.Elm.Internal.Orphans ()
 import qualified Servant.Foreign              as F
 import           Text.PrettyPrint.Leijen.Text
 
 
--- TODO: Export this stuff from elm-bridge
+toElmTypeRef :: EType -> Text
+toElmTypeRef eType = T.pack $ renderElm eType
 
-getName :: ETypeDef -> ETypeName
-getName eType = case defaultAlterations' $ defaultAlterations eType of
-  ETypeAlias (EAlias name _ _ _ _) -> name
-  ETypePrimAlias (EPrimAlias name _) -> name
-  ETypeSum (ESum name _ _ _ _) -> name
-
-recAlterName :: (ETypeName -> ETypeName) -> ETypeDef -> ETypeDef
-recAlterName nameFun eType = case defaultAlterations eType of
-  ETypeAlias ealias@EAlias{..} -> ETypeAlias ealias { ea_name = nameFun ea_name }
-  ETypePrimAlias epalias@EPrimAlias{..} -> ETypePrimAlias epalias { epa_name = nameFun epa_name }
-  ETypeSum esum@ESum{..} -> ETypeSum esum { es_name = nameFun es_name }
-
-defaultAlterations' :: ETypeDef -> ETypeDef
-defaultAlterations' = recAlterName $ \t -> case t of
-                                  -- ETyApp (ETyCon (ETCon "HashSet")) s             -> checkSet s
-                                  -- ETyApp (ETyCon (ETCon "Set")) s                 -> checkSet s
-                                  -- ETyApp (ETyApp (ETyCon (ETCon "HashMap")) k) v  -> checkMap k v
-                                  -- ETyApp (ETyApp (ETyCon (ETCon "THashMap")) k) v -> checkMap k v
-                                  -- ETyApp (ETyApp (ETyCon (ETCon "Map")) k) v      -> checkMap k v
-                                  ETypeName "Integer" args                        -> ETypeName "Int" args
-                                  ETypeName "Natural" args                        -> ETypeName "Int" args
-                                  ETypeName "Text" args                           -> ETypeName "String" args
-                                  ETypeName "Vector" args                         -> ETypeName "List" args
-                                  ETypeName "Double" args                         -> ETypeName "Float" args
-                                  _                                               -> t
-
-
-toElmTypeRef :: ElmThing -> Text
-toElmTypeRef (ElmType eType) = T.pack $ et_name $ getName eType
-
-toElmDecoderRef :: ElmThing -> Text
+toElmDecoderRef :: EType -> Text
 toElmDecoderRef eType = "jsonDec" `T.append` toElmTypeRef eType
 
-toElmEncoderRef :: ElmThing -> Text
+toElmEncoderRef :: EType -> Text
 toElmEncoderRef eType = "jsonEnc" `T.append` toElmTypeRef eType
 
 {-|
@@ -155,8 +122,8 @@ would be better off creating a 'Spec' with the result and using 'specsToDir',
 which handles the module name for you.
 -}
 generateElmForAPI
-  :: ( F.HasForeign LangElm ElmThing api
-     , F.GenerateList ElmThing (F.Foreign ElmThing api))
+  :: ( F.HasForeign LangElm EType api
+     , F.GenerateList EType (F.Foreign EType api))
   => Proxy api
   -> [Text]
 generateElmForAPI =
@@ -167,8 +134,8 @@ generateElmForAPI =
 Generate Elm code for the API with custom options.
 -}
 generateElmForAPIWith
-  :: ( F.HasForeign LangElm ElmThing api
-     , F.GenerateList ElmThing (F.Foreign ElmThing api))
+  :: ( F.HasForeign LangElm EType api
+     , F.GenerateList EType (F.Foreign EType api))
   => ElmOptions
   -> Proxy api
   -> [Text]
@@ -181,7 +148,7 @@ i = 4
 {-|
 Generate an Elm function for one endpoint.
 -}
-generateElmForRequest :: ElmOptions -> F.Req ElmThing -> Doc
+generateElmForRequest :: ElmOptions -> F.Req EType -> Doc
 generateElmForRequest opts request =
   funcDef
   where
@@ -216,7 +183,7 @@ generateElmForRequest opts request =
     elmRequest =
       mkRequest opts request
 
-mkTypeSignature :: ElmOptions -> F.Req ElmThing -> Doc
+mkTypeSignature :: ElmOptions -> F.Req EType -> Doc
 mkTypeSignature opts request =
   (hsep . punctuate " ->" . concat)
     [ catMaybes [urlPrefixType]
@@ -265,19 +232,19 @@ mkTypeSignature opts request =
       pure ("Http.Request" <+> parens result)
 
 
-elmHeaderArg :: F.HeaderArg ElmThing -> Doc
+elmHeaderArg :: F.HeaderArg EType -> Doc
 elmHeaderArg header =
   "header_" <>
   header ^. F.headerArg . F.argName . to (stext . T.replace "-" "_" . F.unPathSegment)
 
 
-elmCaptureArg :: F.Segment ElmThing -> Doc
+elmCaptureArg :: F.Segment EType -> Doc
 elmCaptureArg segment =
   "capture_" <>
   F.captureArg segment ^. F.argName . to (stext . F.unPathSegment)
 
 
-elmQueryArg :: F.QueryArg ElmThing -> Doc
+elmQueryArg :: F.QueryArg EType -> Doc
 elmQueryArg arg =
   "query_" <>
   arg ^. F.queryArgName . F.argName . to (stext . F.unPathSegment)
@@ -298,7 +265,7 @@ isNotCookie header =
 
 mkArgs
   :: ElmOptions
-  -> F.Req ElmThing
+  -> F.Req EType
   -> Doc
 mkArgs opts request =
   (hsep . concat) $
@@ -325,7 +292,7 @@ mkArgs opts request =
     ]
 
 
-mkLetParams :: ElmOptions -> F.Req ElmThing -> Maybe Doc
+mkLetParams :: ElmOptions -> F.Req EType -> Maybe Doc
 mkLetParams opts request =
   if null (request ^. F.reqUrl . F.queryStr) then
     Nothing
@@ -337,7 +304,7 @@ mkLetParams opts request =
     params :: [Doc]
     params = map paramToDoc (request ^. F.reqUrl . F.queryStr)
 
-    paramToDoc :: F.QueryArg ElmThing -> Doc
+    paramToDoc :: F.QueryArg EType -> Doc
     paramToDoc qarg =
       -- something wrong with indentation here...
       case qarg ^. F.queryArgType of
@@ -374,7 +341,7 @@ mkLetParams opts request =
         elmName= qarg ^. F.queryArgName . F.argName . to (stext . F.unPathSegment)
 
 
-mkRequest :: ElmOptions -> F.Req ElmThing -> Doc
+mkRequest :: ElmOptions -> F.Req EType -> Doc
 mkRequest opts request =
   "Http.request" <$>
   indent i
@@ -461,7 +428,7 @@ mkRequest opts request =
           error "mkHttpRequest: no reqReturnType?"
 
 
-mkUrl :: ElmOptions -> [F.Segment ElmThing] -> Doc
+mkUrl :: ElmOptions -> [F.Segment EType] -> Doc
 mkUrl opts segments =
   "String.join" <+> dquotes "/" <$>
   (indent i . elmList)
@@ -471,7 +438,7 @@ mkUrl opts segments =
       : map segmentToDoc segments)
   where
 
-    segmentToDoc :: F.Segment ElmThing -> Doc
+    segmentToDoc :: F.Segment EType -> Doc
     segmentToDoc s =
       case F.unSegment s of
         F.Static path ->
@@ -491,7 +458,7 @@ mkUrl opts segments =
 
 
 mkQueryParams
-  :: F.Req ElmThing
+  :: F.Req EType
   -> Doc
 mkQueryParams request =
   if null (request ^. F.reqUrl . F.queryStr) then
