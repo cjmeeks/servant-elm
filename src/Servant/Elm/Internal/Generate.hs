@@ -8,12 +8,16 @@ import           Prelude                      hiding ((<$>))
 import           Control.Lens                 (to, (^.))
 import           Data.List                    (nub)
 import           Data.Maybe                   (catMaybes)
-import           Data.Proxy                   (Proxy)
+import           Data.Proxy                   (Proxy(..))
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
 import qualified Data.Text.Lazy               as L
 import qualified Data.Text.Encoding           as T
-import           Elm.TyRep (EType)
+
+import           Elm.Derive (getType)
+import           Elm.Json (jsonParserForType, jsonSerForType)
+import qualified Elm.Module                   as Elm
+import           Elm.TyRep (ETCon(..), EType(..))
 import           Elm.TyRender (renderElm)
 
 import           Servant.Elm.Internal.Foreign (LangElm, getEndpoints)
@@ -22,14 +26,14 @@ import qualified Servant.Foreign              as F
 import           Text.PrettyPrint.Leijen.Text
 
 
-toElmTypeRef :: EType -> Text
-toElmTypeRef eType = T.pack $ renderElm eType
+toElmTypeRefWith :: ElmOptions -> EType -> Text
+toElmTypeRefWith ElmOptions{..} = T.pack . renderElm . elmAlterations
 
-toElmDecoderRef :: EType -> Text
-toElmDecoderRef eType = "jsonDec" `T.append` toElmTypeRef eType
+toElmDecoderRefWith :: ElmOptions -> EType -> Text
+toElmDecoderRefWith ElmOptions{..} = T.pack . jsonParserForType . elmAlterations
 
-toElmEncoderRef :: EType -> Text
-toElmEncoderRef eType = "jsonEnc" `T.append` toElmTypeRef eType
+toElmEncoderRefWith :: ElmOptions -> EType -> Text
+toElmEncoderRefWith ElmOptions{..} = T.pack . jsonSerForType . elmAlterations
 
 {-|
 Options to configure how code is generated.
@@ -44,11 +48,11 @@ data ElmOptions = ElmOptions
     argument.
     -}
     urlPrefix             :: UrlPrefix
-  , elmModuleName         :: String
+  , elmAlterations        :: (EType -> EType)
     -- ^ Options to pass to elm-export
---  , emptyResponseElmTypes :: [DefineElm]
+  , emptyResponseElmTypes :: [EType]
     -- ^ Types that represent an empty Http response.
---  , stringElmTypes        :: [DefineElm]
+  , stringElmTypes        :: [EType]
     -- ^ Types that represent a String.
   }
 
@@ -76,15 +80,15 @@ The default options are:
 defElmOptions :: ElmOptions
 defElmOptions = ElmOptions
   { urlPrefix = Static ""
-  , elmModuleName = "MyModule"
-  -- , emptyResponseElmTypes =
-  --     [ DefineElm (Proxy :: Proxy NoContent)
-  --     , DefineElm (Proxy :: Proxy ())
-  --     ]
-  -- , stringElmTypes =
-  --     [ DefineElm (Proxy :: Proxy String)
-  --     , DefineElm (Proxy :: Proxy T.Text)
-  --     ]
+  , elmAlterations = Elm.defaultTypeAlterations
+  , emptyResponseElmTypes =
+      [ getType (Proxy :: Proxy F.NoContent)
+      , getType (Proxy :: Proxy ())
+      ]
+  , stringElmTypes =
+      [ getType (Proxy :: Proxy String)
+      , getType (Proxy :: Proxy T.Text)
+      ]
   }
 
 
@@ -199,8 +203,9 @@ mkTypeSignature opts request =
           Dynamic -> Just "String"
           Static _ -> Nothing
 
+    elmTypeRef :: EType -> Doc
     elmTypeRef eType =
-      stext (toElmTypeRef eType)
+      stext $ toElmTypeRefWith opts eType
 
     headerTypes :: [Doc]
     headerTypes =
@@ -229,7 +234,7 @@ mkTypeSignature opts request =
     returnType :: Maybe Doc
     returnType = do
       result <- fmap elmTypeRef $ request ^. F.reqReturnType
-      pure ("Http.Request" <+> parens result)
+      pure ("Http.Request" <+> result)
 
 
 elmHeaderArg :: F.HeaderArg EType -> Doc
@@ -311,16 +316,13 @@ mkLetParams opts request =
         F.Normal ->
           let
             argType = qarg ^. F.queryArgName . F.argType
-            toStringSrc = ""
-            wrapped = False
-            -- TODO: ????
-            -- wrapped = isElmMaybeType argType
-            -- -- Don't use "toString" on Elm Strings, otherwise we get extraneous quotes.
-            -- toStringSrc =
-            --   if isElmStringType opts argType || isElmMaybeStringType opts argType then
-            --     ""
-            --   else
-            --     "toString >> "
+            wrapped = isElmMaybeType argType
+            -- Don't use "toString" on Elm Strings, otherwise we get extraneous quotes.
+            toStringSrc =
+              if isElmStringType opts argType || isElmMaybeStringType opts argType then
+                ""
+              else
+                "toString >> "
           in
               (if wrapped then name else "Just" <+> name) <$>
               indent 4 ("|> Maybe.map" <+> parens (toStringSrc <> "Http.encodeUri >> (++)" <+> dquotes (elmName <> equals)) <$>
@@ -370,15 +372,12 @@ mkRequest opts request =
       let headerName = header ^. F.headerArg . F.argName . to (stext . F.unPathSegment)
           headerArgName = elmHeaderArg header
           argType = header ^. F.headerArg . F.argType
---          wrapped = isElmMaybeType argType
-          -- TODO ???
-          wrapped = False
-          toStringSrc = mempty
-          -- toStringSrc =
-          --   if isElmMaybeStringType opts argType || isElmStringType opts argType then
-          --     mempty
-          --   else
-          --     " << toString"
+          wrapped = isElmMaybeType argType
+          toStringSrc =
+            if isElmMaybeStringType opts argType || isElmStringType opts argType then
+              mempty
+            else
+              " << toString"
       in
         "Maybe.map" <+> parens (("Http.header" <+> dquotes headerName <> toStringSrc))
         <+>
@@ -402,27 +401,26 @@ mkRequest opts request =
         Just elmTypeExpr ->
           let
             encoderName =
-              toElmEncoderRef elmTypeExpr
+              toElmEncoderRefWith opts elmTypeExpr
           in
             "Http.jsonBody" <+> parens (stext encoderName <+> elmBodyArg)
 
     expect =
       case request ^. F.reqReturnType of
-        -- TODO: ????
-        -- Just elmTypeExpr | isEmptyType opts elmTypeExpr ->
-        --   let elmConstructor =
-        --         toElmTypeRef elmTypeExpr
-        --   in
-        --     "Http.expectStringResponse" <$>
-        --     indent i (parens (backslash <> braces " body " <+> "->" <$>
-        --                       indent i ("if String.isEmpty body then" <$>
-        --                                 indent i "Ok" <+> stext elmConstructor <$>
-        --                                 "else" <$>
-        --                                 indent i ("Err" <+> dquotes "Expected the response body to be empty")) <> line))
-        
+        Just elmTypeExpr | isEmptyType opts elmTypeExpr ->
+          let elmConstructor =
+                toElmTypeRefWith opts elmTypeExpr
+          in
+            "Http.expectStringResponse" <$>
+            indent i (parens (backslash <> braces " body " <+> "->" <$>
+                              indent i ("if String.isEmpty body then" <$>
+                                        indent i "Ok" <+> stext elmConstructor <$>
+                                        "else" <$>
+                                        indent i ("Err" <+> dquotes "Expected the response body to be empty")) <> line))
+
 
         Just elmTypeExpr ->
-          "Http.expectJson" <+> stext (toElmDecoderRef elmTypeExpr)
+          "Http.expectJson <|" <+> stext (toElmDecoderRefWith opts elmTypeExpr)
 
         Nothing ->
           error "mkHttpRequest: no reqReturnType?"
@@ -446,13 +444,11 @@ mkUrl opts segments =
         F.Cap arg ->
           let
             -- Don't use "toString" on Elm Strings, otherwise we get extraneous quotes.
-            -- TODO: ????
-            toStringSrc = empty
-            -- toStringSrc =
-            --   if isElmStringType opts (arg ^. F.argType) then
-            --     empty
-            --   else
-            --     " |> toString"
+            toStringSrc =
+              if isElmStringType opts (arg ^. F.argType) then
+                empty
+              else
+                " |> toString"
           in
             (elmCaptureArg s) <> toStringSrc <> " |> Http.encodeUri"
 
@@ -470,30 +466,30 @@ mkQueryParams request =
                             indent i (dquotes "?" <+> "++ String.join" <+> dquotes "&" <+> "params"))
 
 
--- {- | Determines whether we construct an Elm function that expects an empty
--- response body.
--- -}
--- isEmptyType :: ElmOptions -> ETypeDef -> Bool
--- isEmptyType opts elmTypeExpr =
---   elmTypeExpr `elem` emptyResponseElmTypes opts
+{- | Determines whether we construct an Elm function that expects an empty
+response body.
+-}
+isEmptyType :: ElmOptions -> EType -> Bool
+isEmptyType opts elmTypeExpr =
+  elmTypeExpr `elem` emptyResponseElmTypes opts
 
 
--- {- | Determines whether we call `toString` on URL captures and query params of
--- this type in Elm.
--- -}
--- isElmStringType :: ElmOptions -> ETypeDef -> Bool
--- isElmStringType opts elmTypeExpr =
---   elmTypeExpr `elem` stringElmTypes opts
+{- | Determines whether we call `toString` on URL captures and query params of
+this type in Elm.
+-}
+isElmStringType :: ElmOptions -> EType -> Bool
+isElmStringType opts elmTypeExpr =
+  elmTypeExpr `elem` stringElmTypes opts
 
--- {- | Determines whether a type is 'Maybe a' where 'a' is something akin to a 'String'.
--- -}
--- isElmMaybeStringType :: ElmOptions -> ETypeDef -> Bool
--- isElmMaybeStringType opts (ElmPrimitive (EMaybe elmTypeExpr)) = elmTypeExpr `elem` stringElmTypes opts
--- isElmMaybeStringType _ _ = False
+{- | Determines whether a type is 'Maybe a' where 'a' is something akin to a 'String'.
+-}
+isElmMaybeStringType :: ElmOptions -> EType -> Bool
+isElmMaybeStringType opts (ETyApp (ETyCon (ETCon "Maybe")) elmTypeExpr) = elmTypeExpr `elem` stringElmTypes opts
+isElmMaybeStringType _ _ = False
 
--- isElmMaybeType :: ETypeDef -> Bool
--- isElmMaybeType (ElmPrimitive (EMaybe _)) = True
--- isElmMaybeType _ = False
+isElmMaybeType :: EType -> Bool
+isElmMaybeType (ETyApp (ETyCon (ETCon "Maybe")) _) = True
+isElmMaybeType _ = False
 
 
 -- Doc helpers
