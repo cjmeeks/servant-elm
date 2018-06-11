@@ -13,12 +13,14 @@ import           Data.Text                    (Text)
 import qualified Data.Text                    as T
 import qualified Data.Text.Lazy               as L
 import qualified Data.Text.Encoding           as T
+import           Data.Text.IO                 as TIO
 
 import           Elm.Derive (getType)
 import           Elm.Json (jsonParserForType, jsonSerForType)
 import qualified Elm.Module                   as Elm
 import           Elm.TyRep (ETCon(..), EType(..))
 import           Elm.TyRender (renderElm)
+import           Elm.Versions (ElmVersion(Elm0p18))
 
 import           Servant.Elm.Internal.Foreign (LangElm, getEndpoints)
 import           Servant.Elm.Internal.Orphans ()
@@ -48,6 +50,7 @@ data ElmOptions = ElmOptions
     argument.
     -}
     urlPrefix             :: UrlPrefix
+    -- * The name of the generated Elm module.
   , elmAlterations        :: (EType -> EType)
     -- ^ Options to pass to elm-export
   , emptyResponseElmTypes :: [EType]
@@ -69,12 +72,14 @@ The default options are:
 
 > { urlPrefix =
 >     Static ""
-> , elmExportOptions =
->     Elm.defaultOptions
+> , elmAlterations =
+>     Elm.defaultTypeAlterations
 > , emptyResponseElmTypes =
->     [ toElmType NoContent ]
+>     [ getType (Proxy :: Proxy F.NoContent)
+>     , getType (Proxy :: Proxy ()) ]
 > , stringElmTypes =
->     [ toElmType "" ]
+>     [ getType (Proxy :: Proxy String)
+>     , getType (Proxy :: Proxy T.Text) ]
 > }
 -}
 defElmOptions :: ElmOptions
@@ -91,7 +96,6 @@ defElmOptions = ElmOptions
       ]
   }
 
-
 {-|
 Default imports required by generated Elm code.
 
@@ -99,22 +103,42 @@ You probably want to include this at the top of your generated Elm module.
 
 The default required imports are:
 
-> import Json.Decode exposing (..)
-> import Json.Decode.Pipeline exposing (..)
-> import Json.Encode
+> import Json.Decode
+> import Json.Encode exposing (Value)
+> -- The following module comes from bartavelle/json-helpers
+> import Json.Helpers exposing (..)
+> import Dict exposing (Dict)
+> import Set
 > import Http
 > import String
 -}
 defElmImports :: Text
 defElmImports =
   T.unlines
-    [ "import Json.Decode exposing (..)"
-    , "import Json.Decode.Pipeline exposing (..)"
-    , "import Json.Encode"
+    [ "import Json.Decode"
+    , "import Json.Encode exposing (Value)"
+    , "-- The following module comes from bartavelle/json-helpers"
+    , "import Json.Helpers exposing (..)"
+    , "import Dict exposing (Dict)"
+    , "import Set"
     , "import Http"
     , "import String"
     ]
 
+{-|
+Generate an Elm module
+
+
+-}
+generateElmModule :: (F.HasForeign LangElm EType api
+     , F.GenerateList EType (F.Foreign EType api)) => Text -> Text -> [Elm.DefineElm] -> FilePath -> IO ()
+generateElmModule moduleName imports typeDefs filePath = do
+  let out = T.unlines
+            [ T.pack $ Elm.moduleHeader Elm0p18 (T.unpack moduleName)
+            , imports
+            , T.pack $ Elm.makeModuleContent typeDefs
+            ]
+  TIO.writeFile filePath out
 
 {-|
 Generate Elm code for the API with default options.
