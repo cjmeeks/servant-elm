@@ -6,7 +6,7 @@ module Servant.Elm.Internal.Generate where
 
 import           Prelude                      hiding ((<$>))
 import           Control.Lens                 (to, (^.))
-import           Data.List                    (nub)
+import           Data.List                    (intersperse, nub)
 import           Data.Maybe                   (catMaybes)
 import           Data.Proxy                   (Proxy(..))
 import           Data.Text                    (Text)
@@ -126,19 +126,45 @@ defElmImports =
     ]
 
 {-|
-Generate an Elm module
-
-
+Helper to generate a complete Elm module given a list of Elm type definitions
+and an API.
 -}
-generateElmModule :: (F.HasForeign LangElm EType api
-     , F.GenerateList EType (F.Foreign EType api)) => Text -> Text -> [Elm.DefineElm] -> FilePath -> IO ()
-generateElmModule moduleName imports typeDefs filePath = do
-  let out = T.unlines
-            [ T.pack $ Elm.moduleHeader Elm0p18 (T.unpack moduleName)
-            , imports
-            , T.pack $ Elm.makeModuleContent typeDefs
-            ]
+generateElmModuleWith ::
+     ( F.HasForeign LangElm EType api
+     , F.GenerateList EType (F.Foreign EType api)
+     )
+  => ElmOptions
+  -> Text
+  -> Text
+  -> FilePath
+  -> [Elm.DefineElm]
+  -> Proxy api
+  -> IO ()
+generateElmModuleWith options moduleName imports filePath typeDefs api = do
+  let out =
+        T.unlines $
+        [ T.pack $ Elm.moduleHeader Elm0p18 (T.unpack moduleName)
+        , imports
+        , T.pack $ Elm.makeModuleContent typeDefs
+        ] ++
+        generateElmForAPIWith options api
   TIO.writeFile filePath out
+
+{-|
+Calls generateElmModuleWith with @defElmOptions@.
+-}
+generateElmModule ::
+     ( F.HasForeign LangElm EType api
+     , F.GenerateList EType (F.Foreign EType api)
+     )
+  => Text
+  -> Text
+  -> FilePath
+  -> [Elm.DefineElm]
+  -> Proxy api
+  -> IO ()
+generateElmModule moduleName imports filePath typeDefs api =
+  generateElmModuleWith defElmOptions moduleName imports filePath typeDefs api
 
 {-|
 Generate Elm code for the API with default options.
@@ -167,7 +193,7 @@ generateElmForAPIWith
   => ElmOptions
   -> Proxy api
   -> [Text]
-generateElmForAPIWith opts =
+generateElmForAPIWith opts = intersperse "" .
   nub . map docToText . map (generateElmForRequest opts) . getEndpoints
 
 i :: Int
