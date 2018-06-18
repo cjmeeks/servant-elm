@@ -23,7 +23,6 @@ import           Elm.TyRender (renderElm)
 import           Elm.Versions (ElmVersion(Elm0p18))
 
 import           Servant.Elm.Internal.Foreign (LangElm, getEndpoints)
-import           Servant.Elm.Internal.Orphans ()
 import qualified Servant.Foreign              as F
 import           Text.PrettyPrint.Leijen.Text
 
@@ -50,7 +49,7 @@ data ElmOptions = ElmOptions
     argument.
     -}
     urlPrefix             :: UrlPrefix
-    -- * The name of the generated Elm module.
+    -- * Alterations to perform on ETypes before code generation.
   , elmAlterations        :: (EType -> EType)
     -- ^ Options to pass to elm-export
   , emptyResponseElmTypes :: [EType]
@@ -95,6 +94,7 @@ defElmOptions = ElmOptions
       , getType (Proxy :: Proxy T.Text)
       ]
   }
+
 
 {-|
 Default imports required by generated Elm code.
@@ -236,6 +236,7 @@ generateElmForRequest opts request =
 
     elmRequest =
       mkRequest opts request
+
 
 mkTypeSignature :: ElmOptions -> F.Req EType -> Doc
 mkTypeSignature opts request =

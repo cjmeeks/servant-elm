@@ -19,11 +19,6 @@ data LangElm
 instance (Typeable a) => HasForeignType LangElm EType a where
   typeFor _ _ _ = getType (Proxy :: Proxy a)
 
--- instance HasForeignType LangElm ElmThing EType where
---   typeFor _ _ x = ElmConstructor x
-
-
-
 getEndpoints
   :: ( HasForeign LangElm EType api
      , GenerateList EType (Foreign EType api))
