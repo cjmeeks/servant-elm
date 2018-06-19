@@ -6,7 +6,7 @@ module Servant.Elm.Internal.Generate where
 
 import           Prelude                      hiding ((<$>))
 import           Control.Lens                 (to, (^.))
-import           Data.List                    (intersperse, nub)
+import           Data.List                    (intercalate, intersperse, nub)
 import           Data.Maybe                   (catMaybes)
 import           Data.Proxy                   (Proxy(..))
 import           Data.Text                    (Text)
@@ -23,6 +23,7 @@ import           Elm.Versions (ElmVersion(Elm0p18))
 
 import           Servant.Elm.Internal.Foreign (LangElm, getEndpoints)
 import qualified Servant.Foreign              as F
+import           System.Directory (createDirectoryIfMissing)
 import           Text.PrettyPrint.Leijen.Text
 
 
@@ -62,6 +63,7 @@ data UrlPrefix
   = Static T.Text
   | Dynamic
 
+type Namespace = [String]
 
 {-|
 Default options for generating Elm code.
@@ -133,21 +135,26 @@ generateElmModuleWith ::
      , F.GenerateList EType (F.Foreign EType api)
      )
   => ElmOptions
-  -> Text
+  -> Namespace
   -> Text
   -> FilePath
   -> [Elm.DefineElm]
   -> Proxy api
   -> IO ()
-generateElmModuleWith options moduleName imports filePath typeDefs api = do
+generateElmModuleWith options namespace imports rootDir typeDefs api = do
   let out =
         T.unlines $
-        [ T.pack $ Elm.moduleHeader Elm0p18 (T.unpack moduleName)
+        [ T.pack $ Elm.moduleHeader Elm0p18 moduleName
+        , ""
         , imports
         , T.pack $ Elm.makeModuleContent typeDefs
         ] ++
         generateElmForAPIWith options api
-  TIO.writeFile filePath out
+      moduleName = intercalate "." namespace
+      filePath = intercalate "/" $ rootDir:init namespace -- ++ [fileName]))
+      fileName = intercalate "/" $ filePath:[last namespace ++ ".elm"]
+  createDirectoryIfMissing True filePath
+  TIO.writeFile fileName out
 
 {-|
 Calls generateElmModuleWith with @defElmOptions@.
@@ -156,14 +163,14 @@ generateElmModule ::
      ( F.HasForeign LangElm EType api
      , F.GenerateList EType (F.Foreign EType api)
      )
-  => Text
+  => Namespace
   -> Text
   -> FilePath
   -> [Elm.DefineElm]
   -> Proxy api
   -> IO ()
-generateElmModule moduleName imports filePath typeDefs api =
-  generateElmModuleWith defElmOptions moduleName imports filePath typeDefs api
+generateElmModule namespace imports filePath typeDefs api =
+  generateElmModuleWith defElmOptions namespace imports filePath typeDefs api
 
 {-|
 Generate Elm code for the API with default options.
