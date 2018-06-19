@@ -31,7 +31,6 @@ library
                      , Servant.Elm.Internal.Foreign
                      , Servant.Elm.Internal.Generate
   build-depends:       base >= 4.7 && < 5
-                     , containers
                      , elm-bridge      >= 0.4
                      , lens
                      , pretty-simple

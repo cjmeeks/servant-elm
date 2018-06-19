@@ -19,6 +19,10 @@ module Servant.Elm
        , defElmOptions
        , defElmImports
        -- * Convenience re-exports from the "Elm" module
+       , DefineElm
+       , EType
+       , defaultTypeAlterations
+       , toElmType
        -- * Convenience re-exports from "Data.Proxy"
        , Proxy(Proxy)
        ) where
@@ -29,3 +33,5 @@ import           Servant.Elm.Internal.Generate (ElmOptions (..), UrlPrefix (..),
                                                 generateElmForAPIWith)
 
 import           Data.Proxy                    (Proxy (Proxy))
+import           Elm.TyRep                     (EType, toElmType)
+import           Elm.Module                    (DefineElm, defaultTypeAlterations)
