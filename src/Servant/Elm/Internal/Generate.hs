@@ -15,10 +15,9 @@ import qualified Data.Text.Lazy               as L
 import qualified Data.Text.Encoding           as T
 import           Data.Text.IO                 as TIO
 
-import           Elm.Derive (getType)
 import           Elm.Json (jsonParserForType, jsonSerForType)
 import qualified Elm.Module                   as Elm
-import           Elm.TyRep (ETCon(..), EType(..))
+import           Elm.TyRep (ETCon(..), EType(..), toElmType)
 import           Elm.TyRender (renderElm)
 import           Elm.Versions (ElmVersion(Elm0p18))
 
@@ -86,12 +85,12 @@ defElmOptions = ElmOptions
   { urlPrefix = Static ""
   , elmAlterations = Elm.defaultTypeAlterations
   , emptyResponseElmTypes =
-      [ getType (Proxy :: Proxy F.NoContent)
-      , getType (Proxy :: Proxy ())
+      [ toElmType (Proxy :: Proxy F.NoContent)
+      , toElmType (Proxy :: Proxy ())
       ]
   , stringElmTypes =
-      [ getType (Proxy :: Proxy String)
-      , getType (Proxy :: Proxy T.Text)
+      [ toElmType (Proxy :: Proxy String)
+      , toElmType (Proxy :: Proxy T.Text)
       ]
   }
 

@@ -8,8 +8,7 @@ module Servant.Elm.Internal.Foreign where
 
 import           Data.Proxy      (Proxy (Proxy))
 import           Data.Typeable   (Typeable)
-import           Elm.Derive      (getType)
-import           Elm.TyRep       (EType)
+import           Elm.TyRep       (EType, toElmType)
 import           Servant.Foreign (Foreign, GenerateList, HasForeign,
                                   HasForeignType, Req, listFromAPI, typeFor)
 
@@ -17,7 +16,7 @@ import           Servant.Foreign (Foreign, GenerateList, HasForeign,
 data LangElm
 
 instance (Typeable a) => HasForeignType LangElm EType a where
-  typeFor _ _ _ = getType (Proxy :: Proxy a)
+  typeFor _ _ _ = toElmType (Proxy :: Proxy a)
 
 getEndpoints
   :: ( HasForeign LangElm EType api
