@@ -3,11 +3,9 @@
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TypeOperators     #-}
 
-import qualified Data.Text    as T
-import           Elm.Derive   (defaultOptions, deriveBoth)
 import qualified Elm.Derive as Elm
 
-import           Servant.API  ((:>), Capture, Get, JSON, QueryParam)
+import           Servant.API  ((:>), Get, JSON, QueryParam)
 import           Servant.Elm  (DefineElm (DefineElm), ElmOptions (urlPrefix), Proxy (Proxy), UrlPrefix (Static), defElmImports, defElmOptions,
                                generateElmModuleWith)
 
@@ -20,12 +18,13 @@ data Gif = Gif
   } deriving (Show, Eq)
 
 concat <$> mapM
-  (deriveBoth Elm.defaultOptions
+  (Elm.deriveBoth Elm.defaultOptions
     { Elm.fieldLabelModifier = \ field ->
         if head field == '_' then
           tail field
         else
           field
+    , Elm.unwrapUnaryRecords = False
     }
   ) [''GifData, ''Gif]
 

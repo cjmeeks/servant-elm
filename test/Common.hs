@@ -1,24 +1,22 @@
 {-# LANGUAGE DataKinds     #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeOperators #-}
 module Common where
 
-import           Data.Aeson   (ToJSON)
 import           Data.Proxy   (Proxy (Proxy))
 import           Data.Text    (Text)
-import           Elm          (ElmType)
-import           GHC.Generics (Generic)
+import           Elm.Derive   (defaultOptions, deriveBoth)
 import           Servant.API  ((:<|>), (:>), Capture, Get, GetNoContent, Header,
                                Header', Headers, JSON, NoContent, Post,
                                PostNoContent, Put, QueryFlag, QueryParam,
                                QueryParam', QueryParams, ReqBody, Required)
+import           Servant.Client (client)
 
 data Book = Book
     { title :: String
-    } deriving (Generic)
+    }
 
-instance ToJSON Book
-instance ElmType Book
+deriveBoth defaultOptions ''Book
 
 type TestApi =
        "one"
@@ -58,3 +56,32 @@ type TestApi =
 
 testApi :: Proxy TestApi
 testApi = Proxy
+
+type HeaderApi =
+  "with-a-header"
+         :> Header "Cookie" String
+         :> Header "myStringHeader" String
+         :> Header "MyIntHeader" Int
+         :> Header' '[Required] "MyRequiredStringHeader" String
+         :> Header' '[Required] "MyRequiredIntHeader" Int
+         :> Get '[JSON] String
+
+headerApi :: Proxy HeaderApi
+headerApi = Proxy
+
+type NothingApi =
+  "nothing"
+         :> Put '[JSON] ()
+
+nothingApi :: Proxy NothingApi
+nothingApi = Proxy
+
+type ResponseHeaderApi = "with-a-response-header"
+         :> Get '[JSON] (Headers '[Header "myResponse" String] String)
+
+
+responseHeaderApi :: Proxy ResponseHeaderApi
+responseHeaderApi = Proxy
+
+
+getHeaders = client responseHeaderApi

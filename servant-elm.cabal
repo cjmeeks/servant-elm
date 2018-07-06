@@ -1,3 +1,4 @@
+
 name:                servant-elm
 version:             0.5.0.0
 synopsis:            Automatically derive Elm functions to query servant webservices.
@@ -31,6 +32,7 @@ library
                      , Servant.Elm.Internal.Foreign
                      , Servant.Elm.Internal.Generate
   build-depends:       base >= 4.7 && < 5
+                     , aeson
                      , directory
                      , elm-bridge      >= 0.4
                      , lens
@@ -55,6 +57,7 @@ test-suite servant-elm-test
                      , elm-bridge >= 0.4
                      , hspec
                      , servant
+                     , servant-client
                      , servant-elm
                      , text
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall

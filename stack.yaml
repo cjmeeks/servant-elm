@@ -8,7 +8,7 @@ packages:
 - '.'
 - location:
     git: git@github.com:tmbull/elm-bridge.git
-    commit: bf90a817024072c45893c875eb541f9d7064a203
+    commit: 0179e228b5de4b19e87d7d473e272aa94e883606
   extra-dep: true
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
