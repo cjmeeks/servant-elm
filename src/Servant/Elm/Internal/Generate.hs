@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
@@ -151,7 +151,7 @@ generateElmModuleWith options namespace imports rootDir typeDefs api = do
         ] ++
         generateElmForAPIWith options api
       moduleName = intercalate "." namespace
-      filePath = intercalate "/" $ rootDir:init namespace -- ++ [fileName]))
+      filePath = intercalate "/" $ rootDir:init namespace
       fileName = intercalate "/" $ filePath:[last namespace ++ ".elm"]
   createDirectoryIfMissing True filePath
   TIO.writeFile fileName out
@@ -262,7 +262,7 @@ mkTypeSignature opts request =
 
     elmTypeRef :: EType -> Doc
     elmTypeRef eType =
-      stext $ toElmTypeRefWith opts eType
+      stext (toElmTypeRefWith opts eType)
 
     headerTypes :: [Doc]
     headerTypes =

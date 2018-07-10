@@ -16,10 +16,6 @@ import           Servant.Foreign (Foreign, GenerateList, HasForeign,
 
 data LangElm
 
-type family ElmType a where
-  ElmType (Headers ls a) = a
-  ElmType a = a
-
 instance {-# OVERLAPPING #-} (Typeable a) => HasForeignType LangElm EType (Headers b a) where
   typeFor _ _ _ = toElmType (Proxy :: Proxy a)
 

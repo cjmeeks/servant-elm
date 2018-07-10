@@ -5,8 +5,10 @@
 
 import           Elm.Derive   (defaultOptions, deriveBoth)
 
-import           Servant.API  ((:>), (:<|>), Capture, Get, GetNoContent, JSON, NoContent, Post, QueryParam, ReqBody)
-import           Servant.Elm  (DefineElm (DefineElm), ElmOptions(..), Proxy (Proxy), UrlPrefix (Static), defElmImports, defElmOptions,
+import           Servant.API  ((:<|>), (:>), Capture, Get, GetNoContent, JSON,
+                               NoContent, Post, QueryParam, ReqBody)
+import           Servant.Elm  (DefineElm (DefineElm), ElmOptions(..), Proxy (Proxy),
+                               UrlPrefix (Static), defElmImports, defElmOptions,
                                generateElmModuleWith)
 
 myElmOpts :: ElmOptions

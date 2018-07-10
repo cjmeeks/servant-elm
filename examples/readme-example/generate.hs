@@ -10,8 +10,8 @@ import           Servant.Elm  (DefineElm (DefineElm), Proxy (Proxy), defElmImpor
                                generateElmModuleWith)
 
 data Book = Book
-    { name :: String
-    }
+  { name :: String
+  }
 
 deriveBoth defaultOptions ''Book
 

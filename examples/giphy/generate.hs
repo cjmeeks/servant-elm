@@ -6,7 +6,8 @@
 import qualified Elm.Derive as Elm
 
 import           Servant.API  ((:>), Get, JSON, QueryParam)
-import           Servant.Elm  (DefineElm (DefineElm), ElmOptions (urlPrefix), Proxy (Proxy), UrlPrefix (Static), defElmImports, defElmOptions,
+import           Servant.Elm  (DefineElm (DefineElm), ElmOptions (urlPrefix), Proxy (Proxy), UrlPrefix (Static),
+                               defElmImports, defElmOptions,
                                generateElmModuleWith)
 
 data GifData = GifData

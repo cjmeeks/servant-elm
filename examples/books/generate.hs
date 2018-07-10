@@ -5,14 +5,14 @@
 
 import           Elm.Derive   (defaultOptions, deriveBoth)
 
-import           Servant.API  ((:>), (:<|>), Capture, Get, ReqBody, Post, JSON)
+import           Servant.API  ((:<|>), (:>), Capture, Get, JSON, Post, ReqBody)
 import           Servant.Elm  (DefineElm (DefineElm), ElmOptions(urlPrefix),
                                Proxy (Proxy), UrlPrefix(Static), defElmImports,
                                defElmOptions, generateElmModuleWith)
 
 data Book = Book
-    { name :: String
-    }
+  { name :: String
+  } deriving (Show, Eq)
 
 deriveBoth defaultOptions ''Book
 
@@ -26,7 +26,7 @@ myElmOpts = defElmOptions { urlPrefix = Static "http://localhost:8000" }
 main :: IO ()
 main =
   generateElmModuleWith
-    defElmOptions
+    myElmOpts
     [ "Generated"
     , "BooksApi"
     ]

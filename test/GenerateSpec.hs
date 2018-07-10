@@ -14,10 +14,10 @@ import qualified Data.Text                 as T
 import qualified Data.Text.IO              as T
 import           Servant.API               ((:>), Get, JSON)
 import           Servant.Elm
-import           Test.Hspec                (Spec, describe, hspec, it, shouldBe)
-import           Test.HUnit                (Assertion, assertBool, assertEqual)
+import           Test.Hspec                (Spec, describe, hspec, it)
+import           Test.HUnit                (Assertion, assertEqual)
 
-import           Common                    (testApi, headerApi, nothingApi)
+import           Common                    (testApi)
 
 
 main :: IO ()
@@ -70,7 +70,6 @@ spec = do
                               "import Json.Decode exposing (..)\n\n\n")]
                   let generated = filter (not . T.null) (generateElmForAPI testApi)
                   generated `itemsShouldBe` expected
-
            it "with dynamic URLs" $
                do expected <-
                       mapM
@@ -92,18 +91,21 @@ spec = do
                   generated `itemsShouldBe` expected
 
 itemsShouldBe :: [Text] -> [(String, Text, Text)] -> IO ()
-itemsShouldBe actual expected = do
-    zipWithM_ (\ a t@(_, h, e) ->
-        T.writeFile "actual" (h <> a) >> T.writeFile "expected" e >> shouldBeDiff a t)
+itemsShouldBe actual expected =
+    zipWithM_
+        shouldBeDiff
         (actual ++ replicate (length expected - length actual) mempty)
         (expected ++ replicate (length actual - length expected) mempty)
 
 shouldBeDiff :: Text -> (String, Text, Text) -> Assertion
 shouldBeDiff a (fpath,header,b) =
     assertEqual
-        ("< generated\n" <> "> " <> fpath <> "\n" <> "<" <> T.unpack header <> T.unpack a <> "\n>" <> T.unpack b)
-         -- Diff.ppDiff
-         --     (Diff.getGroupedDiff
-         --          (lines (T.unpack (header <> a)))
-         --          (lines (T.unpack b))))
-        (T.strip $ header <> a) (T.strip b)
+        ("< generated\n" <> "> " <> fpath <> "\n" <>
+         Diff.ppDiff
+             (Diff.getGroupedDiff
+                  (lines (T.unpack actual))
+                  (lines (T.unpack expected))))
+        actual expected
+    where
+      actual = T.strip $ header <> a
+      expected = T.strip b
