@@ -13,7 +13,6 @@ import           Servant.API     (Headers(..))
 import           Servant.Foreign (Foreign, GenerateList, HasForeign,
                                   HasForeignType, Req, listFromAPI, typeFor)
 
-
 data LangElm
 
 --- TODO: Generate Elm functions that can handle the response headers. PRs

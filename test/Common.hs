@@ -10,6 +10,8 @@ import           Servant.API  ((:<|>), (:>), Capture, Get, GetNoContent, Header,
                                Header', Headers, JSON, NoContent, Post,
                                PostNoContent, Put, QueryFlag, QueryParam,
                                QueryParam', QueryParams, ReqBody, Required)
+import           Servant.API.Experimental.Auth (AuthProtect)
+
 
 data Book = Book
     { title :: String
@@ -52,6 +54,9 @@ type TestApi =
          :> Get '[JSON] String
   :<|> "with-a-response-header"
          :> Get '[JSON] (Headers '[Header "myResponse" String] String)
+  :<|> "with-cookie"
+         :> AuthProtect "cookie-auth"
+         :> Get '[JSON] Int
 
 testApi :: Proxy TestApi
 testApi = Proxy
