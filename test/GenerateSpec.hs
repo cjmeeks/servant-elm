@@ -67,6 +67,10 @@ spec = do
                           , ( "test/elm-sources/getWitharesponseheaderSource.elm"
                             , "module GetWithAResponseHeaderSource exposing (..)\n\n" <>
                               "import Http\n" <>
+                              "import Json.Decode exposing (..)\n\n\n")
+                          , ( "test/elm-sources/getWithacookieSource.elm"
+                            , "module GetWithACookieSource exposing (..)\n\n" <>
+                              "import Http\n" <>
                               "import Json.Decode exposing (..)\n\n\n")]
                   let generated = filter (not . T.null) (generateElmForAPI testApi)
                   generated `itemsShouldBe` expected

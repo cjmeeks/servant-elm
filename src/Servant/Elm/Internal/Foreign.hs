@@ -3,6 +3,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeOperators         #-}
 
 module Servant.Elm.Internal.Foreign where
 
@@ -12,13 +13,17 @@ import           Elm.TyRep       (EType, toElmType)
 import           Servant.API     (Headers(..))
 import           Servant.Foreign (Foreign, GenerateList, HasForeign,
                                   HasForeignType, Req, listFromAPI, typeFor)
-
+import           Servant.Server.Experimental.Auth.Cookie (Cookied)
+import           Servant.Elm.Internal.Orphans ()
 
 data LangElm
 
 --- TODO: Generate Elm functions that can handle the response headers. PRs
 --- welcome!
 instance {-# OVERLAPPING #-} (Typeable a) => HasForeignType LangElm EType (Headers b a) where
+  typeFor _ _ _ = toElmType (Proxy :: Proxy a)
+
+instance {-# OVERLAPPING #-} (Typeable a) => HasForeignType LangElm EType (Cookied a) where
   typeFor _ _ _ = toElmType (Proxy :: Proxy a)
 
 instance {-# OVERLAPPABLE #-} (Typeable a) => HasForeignType LangElm EType a where

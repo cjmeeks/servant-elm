@@ -5,10 +5,11 @@ module Common where
 
 import           Data.Proxy   (Proxy (Proxy))
 import           Data.Text    (Text)
-import           Servant.API  ((:<|>), (:>), Capture, Get, GetNoContent, Header,
+import           Servant.API  ((:<|>), (:>), AuthProtect, Capture, Get, GetNoContent, Header,
                                Header', Headers, JSON, NoContent, Post,
                                PostNoContent, Put, QueryFlag, QueryParam,
                                QueryParam', QueryParams, ReqBody, Required)
+import Servant.Server.Experimental.Auth.Cookie (Cookied)
 import           Servant.Elm  (deriveBoth, defaultOptions)
 
 data Book = Book
@@ -52,6 +53,9 @@ type TestApi =
          :> Get '[JSON] String
   :<|> "with-a-response-header"
          :> Get '[JSON] (Headers '[Header "myResponse" String] String)
+  :<|> "with-a-cookie"
+         :> AuthProtect "cookie-auth"
+         :> Get '[JSON] (Cookied String)
 
 testApi :: Proxy TestApi
 testApi = Proxy

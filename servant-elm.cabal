@@ -31,6 +31,7 @@ library
                      , Servant.Elm.Internal.Foreign
                      , Servant.Elm.Internal.Generate
                      , Servant.Elm.Internal.Options
+                     , Servant.Elm.Internal.Orphans
   build-depends:       base >= 4.7 && < 5
                      , aeson >= 0.9
                      , directory
@@ -38,6 +39,7 @@ library
                      , lens
                      , servant         >= 0.8
                      , servant-foreign >= 0.8
+                     , servant-auth-cookie
                      , text
                      , wl-pprint-text
   ghc-options:         -Wall
@@ -56,6 +58,7 @@ test-suite servant-elm-test
                      , elm-bridge >= 0.4
                      , hspec
                      , servant
+                     , servant-auth-cookie
                      , servant-client
                      , servant-elm
                      , text

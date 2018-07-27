@@ -10,6 +10,10 @@ packages:
     git: git@github.com:agrafix/elm-bridge.git
     commit: 5d298317eaaeed29d832fbdabeba9048eee425b2
   extra-dep: true
+- location:
+    git: git@github.com:tmbull/servant-auth-cookie.git
+    commit: 93e5a6dd5f085f5fc10cbe553629a67c0f7a7b51
+  extra-dep: true
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps: []

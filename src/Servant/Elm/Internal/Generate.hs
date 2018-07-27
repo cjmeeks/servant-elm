@@ -22,6 +22,7 @@ import           Elm.TyRender (renderElm)
 import           Elm.Versions (ElmVersion(Elm0p18))
 
 import           Servant.Elm.Internal.Foreign (LangElm, getEndpoints)
+import           Servant.Elm.Internal.Orphans ()
 import qualified Servant.Foreign              as F
 import           System.Directory (createDirectoryIfMissing)
 import           Text.PrettyPrint.Leijen.Text
