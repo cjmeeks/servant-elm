@@ -147,7 +147,7 @@ generateElmModuleWith options namespace imports rootDir typeDefs api = do
         [ T.pack $ Elm.moduleHeader Elm0p18 moduleName
         , ""
         , imports
-        , T.pack $ Elm.makeModuleContentWithAlterations (Elm.recAlterType $ options elmAlterations) typeDefs
+        , T.pack $ Elm.makeModuleContentWithAlterations (Elm.recAlterType $ elmAlterations options) typeDefs
         ] ++
         generateElmForAPIWith options api
       moduleName = intercalate "." namespace
