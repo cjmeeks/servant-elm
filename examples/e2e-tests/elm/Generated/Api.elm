@@ -172,7 +172,7 @@ getGet query_q =
         params =
             List.filter (not << String.isEmpty)
                 [ query_q
-                    |> Maybe.map (Http.encodeUri >> (++) "q=")
+                    |> Maybe.map (Url.percentEncode >> (++) "q=")
                     |> Maybe.withDefault ""
                 ]
     in
@@ -210,7 +210,7 @@ getByPath capture_path =
         , url =
             String.join "/"
                 [ "https://httpbin.org"
-                , capture_path |> Http.encodeUri
+                , capture_path |> Url.percentEncode
                 ]
         , body =
             Http.emptyBody

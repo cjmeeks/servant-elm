@@ -14,7 +14,7 @@ getBooksByTitle capture_title =
             String.join "/"
                 [ ""
                 , "books"
-                , capture_title |> Http.encodeUri
+                , capture_title |> Url.percentEncode
                 ]
         , body =
             Http.emptyBody

@@ -48,10 +48,10 @@ getRandom query_api_key query_tag =
         params =
             List.filter (not << String.isEmpty)
                 [ query_api_key
-                    |> Maybe.map (Http.encodeUri >> (++) "api_key=")
+                    |> Maybe.map (Url.percentEncode >> (++) "api_key=")
                     |> Maybe.withDefault ""
                 , query_tag
-                    |> Maybe.map (Http.encodeUri >> (++) "tag=")
+                    |> Maybe.map (Url.percentEncode >> (++) "tag=")
                     |> Maybe.withDefault ""
                 ]
     in

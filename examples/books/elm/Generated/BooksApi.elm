@@ -80,7 +80,7 @@ getBooksByBookId capture_bookId =
             String.join "/"
                 [ "http://localhost:8000"
                 , "books"
-                , capture_bookId |> toString |> Http.encodeUri
+                , capture_bookId |> toString |> Url.percentEncode
                 ]
         , body =
             Http.emptyBody

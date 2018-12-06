@@ -14,16 +14,16 @@ getBooks query_published query_sort query_year query_category query_filters =
                   else
                     ""
                 , query_sort
-                    |> Maybe.map (Http.encodeUri >> (++) "sort=")
+                    |> Maybe.map (Url.percentEncode >> (++) "sort=")
                     |> Maybe.withDefault ""
                 , query_year
-                    |> Maybe.map (toString >> Http.encodeUri >> (++) "year=")
+                    |> Maybe.map (toString >> Url.percentEncode >> (++) "year=")
                     |> Maybe.withDefault ""
                 , Just query_category
-                    |> Maybe.map (Http.encodeUri >> (++) "category=")
+                    |> Maybe.map (Url.percentEncode >> (++) "category=")
                     |> Maybe.withDefault ""
                 , query_filters
-                    |> List.map (\val -> "query_filters[]=" ++ (val |> toString |> Http.encodeUri))
+                    |> List.map (\val -> "query_filters[]=" ++ (val |> toString |> Url.percentEncode))
                     |> String.join "&"
                 ]
     in
