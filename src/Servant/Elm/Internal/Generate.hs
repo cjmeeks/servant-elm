@@ -382,7 +382,7 @@ mkLetParams opts request =
                 "toString >> "
           in
               (if wrapped then name else "Just" <+> name) <$>
-              indent 4 ("|> Maybe.map" <+> parens (toStringSrc <> "Http.encodeUri >> (++)" <+> dquotes (elmName <> equals)) <$>
+              indent 4 ("|> Maybe.map" <+> parens (toStringSrc <> "Url.percentEncode >> (++)" <+> dquotes (elmName <> equals)) <$>
                         "|> Maybe.withDefault" <+> dquotes empty)
 
         F.Flag ->
@@ -393,7 +393,7 @@ mkLetParams opts request =
 
         F.List ->
             name <$>
-            indent 4 ("|> List.map" <+> parens (backslash <> "val ->" <+> dquotes (name <> "[]=") <+> "++ (val |> toString |> Http.encodeUri)") <$>
+            indent 4 ("|> List.map" <+> parens (backslash <> "val ->" <+> dquotes (name <> "[]=") <+> "++ (val |> toString |> Url.percentEncode)") <$>
                       "|> String.join" <+> dquotes "&")
       where
         name = elmQueryArg qarg
@@ -507,7 +507,7 @@ mkUrl opts segments =
               else
                 " |> toString"
           in
-            (elmCaptureArg s) <> toStringSrc <> " |> Http.encodeUri"
+            (elmCaptureArg s) <> toStringSrc <> " |> Url.percentEncode"
 
 
 mkQueryParams
