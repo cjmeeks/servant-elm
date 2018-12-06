@@ -124,6 +124,7 @@ defElmImports =
     , "import Set"
     , "import Http"
     , "import String"
+    , "import Url"
     ]
 
 {-|
