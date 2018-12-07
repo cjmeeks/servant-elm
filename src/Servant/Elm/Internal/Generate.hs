@@ -370,7 +370,7 @@ mkLetParams opts request =
           indent 4 (dquotes empty)
         F.List ->
           let argType = qarg ^. F.queryArgName . F.argType
-           in elmName <$>
+           in name <$>
               indent
                 4
                 ("|> List.map" <+>
