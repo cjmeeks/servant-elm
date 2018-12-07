@@ -77,6 +77,7 @@ import Dict exposing (Dict)
 import Set
 import Http
 import String
+import Url
 
 type alias Book  =
    { name: String
@@ -84,8 +85,8 @@ type alias Book  =
 
 jsonDecBook : Json.Decode.Decoder ( Book )
 jsonDecBook =
-   (Json.Decode.string) >>= \pname ->
-   Json.Decode.succeed {name = pname}
+    succeed Book
+        |> required "name" string
 
 jsonEncBook : Book -> Value
 jsonEncBook  val =
@@ -102,7 +103,7 @@ getBooksByBookId capture_bookId =
             String.join "/"
                 [ ""
                 , "books"
-                , capture_bookId |> toString |> Url.percentEncode
+                , capture_bookId |> String.fromInt |> Url.percentEncode
                 ]
         , body =
             Http.emptyBody
