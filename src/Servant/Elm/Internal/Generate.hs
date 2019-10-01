@@ -302,7 +302,7 @@ elmCaptureArg segment =
 
 elmQueryArg :: F.QueryArg EType -> Doc
 elmQueryArg arg =
-  "query_" <> arg ^. F.queryArgName . F.argName . to (stext . F.unPathSegment)
+  arg ^. F.queryArgName . F.argName . to (stext . F.unPathSegment)
 
 elmBodyArg :: Doc
 elmBodyArg = "body"
