@@ -1,22 +1,31 @@
-module Generated.MyApi exposing (..)
+module Generated.MyApi exposing(..)
 
-import Json.Decode exposing (..)
-import Json.Decode.Pipeline exposing (..)
-import Json.Encode
+import Json.Decode
+import Json.Encode exposing (Value)
+-- The following module comes from bartavelle/json-helpers
+import Json.Helpers exposing (..)
+import Dict exposing (Dict)
+import Set
 import Http
 import String
 
+type alias Book  =
+   { name: String
+   }
 
-type alias Book =
-    { name : String
-    }
+jsonDecBook : Json.Decode.Decoder ( Book )
+jsonDecBook =
+   ("name" := Json.Decode.string) >>= \pname ->
+   Json.Decode.succeed {name = pname}
 
-decodeBook : Decoder Book
-decodeBook =
-    decode Book
-        |> required "name" string
+jsonEncBook : Book -> Value
+jsonEncBook  val =
+   Json.Encode.object
+   [ ("name", Json.Encode.string val.name)
+   ]
 
-getBooksByBookId : Int -> Http.Request (Book)
+
+getBooksByBookId : Int -> Http.Request Book
 getBooksByBookId capture_bookId =
     Http.request
         { method =
@@ -27,12 +36,12 @@ getBooksByBookId capture_bookId =
             String.join "/"
                 [ ""
                 , "books"
-                , capture_bookId |> toString |> Http.encodeUri
+                , capture_bookId |> toString |> Url.percentEncode
                 ]
         , body =
             Http.emptyBody
         , expect =
-            Http.expectJson decodeBook
+            Http.expectJson <| jsonDecBook
         , timeout =
             Nothing
         , withCredentials =

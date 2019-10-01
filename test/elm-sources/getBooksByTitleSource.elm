@@ -3,7 +3,7 @@ module GetBooksByTitleSource exposing (..)
 import Http
 
 
-getBooksByTitle : String -> Http.Request (Book)
+getBooksByTitle : String -> Http.Request Book
 getBooksByTitle capture_title =
     Http.request
         { method =
@@ -14,12 +14,12 @@ getBooksByTitle capture_title =
             String.join "/"
                 [ ""
                 , "books"
-                , capture_title |> Http.encodeUri
+                , capture_title |> Url.percentEncode
                 ]
         , body =
             Http.emptyBody
         , expect =
-            Http.expectJson decodeBook
+            Http.expectJson <| jsonDecBook
         , timeout =
             Nothing
         , withCredentials =

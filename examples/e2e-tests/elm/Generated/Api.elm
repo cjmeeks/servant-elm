@@ -1,67 +1,99 @@
-module Generated.Api exposing (..)
+module Generated.Api exposing(..)
 
-import Json.Decode exposing (..)
-import Json.Decode.Pipeline exposing (..)
-import Json.Encode
+import Json.Decode
+import Json.Encode exposing (Value)
+-- The following module comes from bartavelle/json-helpers
+import Json.Helpers exposing (..)
+import Dict exposing (Dict)
+import Set
 import Http
 import String
 
+type alias MessageBody  =
+   { message: String
+   }
 
-type alias Response =
-    { origin : String
-    }
+jsonDecMessageBody : Json.Decode.Decoder ( MessageBody )
+jsonDecMessageBody =
+   ("message" := Json.Decode.string) >>= \pmessage ->
+   Json.Decode.succeed {message = pmessage}
 
-decodeResponse : Decoder Response
-decodeResponse =
-    decode Response
-        |> required "origin" string
+jsonEncMessageBody : MessageBody -> Value
+jsonEncMessageBody  val =
+   Json.Encode.object
+   [ ("message", Json.Encode.string val.message)
+   ]
 
-type NoContent
-    = NoContent
 
-type alias MessageBody =
-    { message : String
-    }
 
-encodeMessageBody : MessageBody -> Json.Encode.Value
-encodeMessageBody x =
-    Json.Encode.object
-        [ ( "message", Json.Encode.string x.message )
-        ]
+type alias QueryArgs  =
+   { q: String
+   }
 
-decodeMessageBody : Decoder MessageBody
-decodeMessageBody =
-    decode MessageBody
-        |> required "message" string
+jsonDecQueryArgs : Json.Decode.Decoder ( QueryArgs )
+jsonDecQueryArgs =
+   ("q" := Json.Decode.string) >>= \pq ->
+   Json.Decode.succeed {q = pq}
 
-type alias ResponseWithJson =
-    { json : MessageBody
-    }
+jsonEncQueryArgs : QueryArgs -> Value
+jsonEncQueryArgs  val =
+   Json.Encode.object
+   [ ("q", Json.Encode.string val.q)
+   ]
 
-decodeResponseWithJson : Decoder ResponseWithJson
-decodeResponseWithJson =
-    decode ResponseWithJson
-        |> required "json" decodeMessageBody
 
-type alias QueryArgs =
-    { q : String
-    }
 
-decodeQueryArgs : Decoder QueryArgs
-decodeQueryArgs =
-    decode QueryArgs
-        |> required "q" string
+type alias Response  =
+   { origin: String
+   }
 
-type alias ResponseWithArgs =
-    { args : QueryArgs
-    }
+jsonDecResponse : Json.Decode.Decoder ( Response )
+jsonDecResponse =
+   ("origin" := Json.Decode.string) >>= \porigin ->
+   Json.Decode.succeed {origin = porigin}
 
-decodeResponseWithArgs : Decoder ResponseWithArgs
-decodeResponseWithArgs =
-    decode ResponseWithArgs
-        |> required "args" decodeQueryArgs
+jsonEncResponse : Response -> Value
+jsonEncResponse  val =
+   Json.Encode.object
+   [ ("origin", Json.Encode.string val.origin)
+   ]
 
-getIp : Http.Request (Response)
+
+
+type alias ResponseWithJson  =
+   { json: MessageBody
+   }
+
+jsonDecResponseWithJson : Json.Decode.Decoder ( ResponseWithJson )
+jsonDecResponseWithJson =
+   ("json" := jsonDecMessageBody) >>= \pjson ->
+   Json.Decode.succeed {json = pjson}
+
+jsonEncResponseWithJson : ResponseWithJson -> Value
+jsonEncResponseWithJson  val =
+   Json.Encode.object
+   [ ("json", jsonEncMessageBody val.json)
+   ]
+
+
+
+type alias ResponseWithArgs  =
+   { args: QueryArgs
+   }
+
+jsonDecResponseWithArgs : Json.Decode.Decoder ( ResponseWithArgs )
+jsonDecResponseWithArgs =
+   ("args" := jsonDecQueryArgs) >>= \pargs ->
+   Json.Decode.succeed {args = pargs}
+
+jsonEncResponseWithArgs : ResponseWithArgs -> Value
+jsonEncResponseWithArgs  val =
+   Json.Encode.object
+   [ ("args", jsonEncQueryArgs val.args)
+   ]
+
+
+getIp : Http.Request Response
 getIp =
     Http.request
         { method =
@@ -76,14 +108,14 @@ getIp =
         , body =
             Http.emptyBody
         , expect =
-            Http.expectJson decodeResponse
+            Http.expectJson <| jsonDecResponse
         , timeout =
             Nothing
         , withCredentials =
             False
         }
 
-getStatus204 : Http.Request (NoContent)
+getStatus204 : Http.Request NoContent
 getStatus204 =
     Http.request
         { method =
@@ -112,7 +144,7 @@ getStatus204 =
             False
         }
 
-postPost : MessageBody -> Http.Request (ResponseWithJson)
+postPost : MessageBody -> Http.Request ResponseWithJson
 postPost body =
     Http.request
         { method =
@@ -125,22 +157,22 @@ postPost body =
                 , "post"
                 ]
         , body =
-            Http.jsonBody (encodeMessageBody body)
+            Http.jsonBody (jsonEncMessageBody body)
         , expect =
-            Http.expectJson decodeResponseWithJson
+            Http.expectJson <| jsonDecResponseWithJson
         , timeout =
             Nothing
         , withCredentials =
             False
         }
 
-getGet : Maybe (String) -> Http.Request (ResponseWithArgs)
+getGet : (Maybe String) -> Http.Request ResponseWithArgs
 getGet query_q =
     let
         params =
             List.filter (not << String.isEmpty)
                 [ query_q
-                    |> Maybe.map (Http.encodeUri >> (++) "q=")
+                    |> Maybe.map (Url.percentEncode >> (++) "q=")
                     |> Maybe.withDefault ""
                 ]
     in
@@ -161,14 +193,14 @@ getGet query_q =
             , body =
                 Http.emptyBody
             , expect =
-                Http.expectJson decodeResponseWithArgs
+                Http.expectJson <| jsonDecResponseWithArgs
             , timeout =
                 Nothing
             , withCredentials =
                 False
             }
 
-getByPath : String -> Http.Request (Response)
+getByPath : String -> Http.Request Response
 getByPath capture_path =
     Http.request
         { method =
@@ -178,12 +210,12 @@ getByPath capture_path =
         , url =
             String.join "/"
                 [ "https://httpbin.org"
-                , capture_path |> Http.encodeUri
+                , capture_path |> Url.percentEncode
                 ]
         , body =
             Http.emptyBody
         , expect =
-            Http.expectJson decodeResponse
+            Http.expectJson <| jsonDecResponse
         , timeout =
             Nothing
         , withCredentials =
