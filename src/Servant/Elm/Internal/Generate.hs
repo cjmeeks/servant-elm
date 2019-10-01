@@ -375,7 +375,7 @@ mkLetParams opts request =
                 4
                 ("|> List.map" <+>
                  parens
-                   (backslash <> "val ->" <+> dquotes (name <> "[]=") <+>
+                   (backslash <> "val ->" <+> dquotes (name <> "=") <+>
                     "++ (val |>" <+>
                     toStringSrc "|>" opts argType <+>
                     "Url.percentEncode)") <$>
